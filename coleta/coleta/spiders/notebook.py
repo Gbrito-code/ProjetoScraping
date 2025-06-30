@@ -5,8 +5,8 @@ class NotebookSpider(scrapy.Spider):
     name = "notebook"
     allowed_domains = ["lista.mercadolivre.com.br"]
     start_urls = ["https://lista.mercadolivre.com.br/notebook#D[A:notebook]"]
-    start_page = 1
-    max_pages = 10  # Limitar a quantidade de páginas para evitar bloqueios
+    page_count = 1
+    max_page = 10 # Limitar a quantidade de páginas para evitar bloqueios
 
     def parse(self, response):
         #aqui vamos pegar todos os produtos da pagina
@@ -31,13 +31,12 @@ class NotebookSpider(scrapy.Spider):
                 "old_money": prices[0] if len(prices) > 0 else None,
                 "new_money": prices[1] if len(prices) > 1 else None,
             }
-            
-            
-        #navegar para a proxima pagina
-        #Sempre que tiver espaço na classe, coloca botão .
-        next_page = response.css("li.andes-pagination__button.andes-pagination__button--next::attr(href)").get()
-        
-        #Agora vamos falar para o scrapy que queremos navegar para a proxima pagina até o final
-        #mas podemos ter problema pegando muitas paginas (pode demorar ou podemos ser bloqueados)
-        #vamos adicionar as variaiveis de controle para limitar a quantidade de paginas
-        yield response.Request(url=next_page, callback=self.parse) if next_page else None
+        #proxima pagina até 10 paginas
+        #se a pagina atual for menor que a pagina maxima, vamos pegar a proxima pagina
+        #Respeite o robots.txt – o Mercado Livre não permite scraping excessivo.
+        #trocar para False para não respeitar o robots.txt em settings.py
+        if self.page_count < self.max_page:
+            self.page_count += 1
+            offset = 48 * (self.page_count - 1)
+            next_page_url = f"https://lista.mercadolivre.com.br/informatica/portateis-acessorios/notebooks/notebook_Desde_{offset}_NoIndex_True"
+            yield scrapy.Request(url=next_page_url, callback=self.parse)
