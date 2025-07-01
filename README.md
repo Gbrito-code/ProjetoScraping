@@ -1,143 +1,106 @@
-# ProjetoScraping
+# 📦 Projeto: Análise de Notebooks do Mercado Livre
 
 
+## Descrição
 
-Ativar o ambiente virtual
-- Criar: python -m venv .venv
-- Ativar: source .venv/Scripts/Activate
+Este projeto realiza uma **ETL completa** dos notebooks anunciados no [Mercado Livre](https://www.mercadolivre.com.br), extraindo dados automaticamente com `Scrapy`, transformando e armazenando com `pandas` + `SQLite`, e por fim apresentando os dados em um **dashboard interativo em Streamlit**.
 
-Instalar scrapy. 
-pip install scrapy.
+---
 
-Sobre o Scrapy é muito confiavel conhecido como framework.
+## Estrutura do Projeto
 
-passos no terminal: 
-criar a estrutura de pasta
-scrapy startproject coleta. 
-Deleta a pipelines por que usamos o pandas para KPI.
-Deleta o middlewares, não vamos usar nada complexos. Exemplos: fazer login em sites, fazer capt e etc...
+```
+├── .git/                  # Configurações do Git
+├── .venv/                 # Ambiente virtual Python
+├── data/
+│   ├── mercadolivre.db   # Banco de dados SQLite com os produtos coletados
+│   └── data.json         # Backup/exportação da coleta em JSON
+├── src/
+│   ├── dashboard/
+│   │   └── app.py        # Dashboard interativo com Streamlit
+│   ├── extraction/
+│   │   └── spiders/
+│   │       └── notebook.py # Spider Scrapy para coletar dados de notebooks
+│   └── transformLoad/
+│       └── main.py       # Tratamento e carregamento dos dados com pandas
+```
 
-agora vamos criar um spiders, usamos para coletar dados de um site
+---
 
-no terminal: 
-````bash
-cd coleta
-scrapy genspider notebook https://lista.mercadolivre.com.br/notebook#D[A:notebook]
-````
-Ele cria um notebook para fazer o scrapy
-não precisamos usar as class e nem entrar em programação orientada a objeto.
+## ⚙️ Tecnologias Utilizadas
 
-Mostrar a pagina do mercado livre no inspecionar e demonstrar como os elementos fica na tela.
-10 minutos para achar os links.
+- Python 3.11+
+- Scrapy – Coleta de dados (web scraping)
+- Pandas – Transformação de dados
+- SQLite – Banco de dados local
+- Streamlit – Dashboard interativo
+- Seaborn + Matplotlib – Visualizações gráficas
 
-podemos fazer essas requisições direto pelo computador/shell
-Usando o scrapt shell
+---
 
-````bash
-scrapy shell
-````
-agora vamos fazer uma requisição para o site.
+## 🚀 Como executar o projeto
 
-````bash
-fetch('https://lista.mercadolivre.com.br/notebook#D[A:notebook]')
-````
-retorna um erro 403. 
-O mercado livre não quer ninguém atacando o site deles, pode ser algum hack tentando invadir o site.
-Uma forma de não ser bloqueado é usar o: user agent.
+### 1. Clone o repositório
 
-user agent é um cabeçario que fala da onde o scrapy está indo e o formato que ele pode devolver. 
-Ele consegue reconhecer o dispositivo.
+```bash
+git clone https://github.com/seu-usuario/seu-repo.git
+cd seu-repo
+```
 
-Acessa o seu navegador e pesquisa por: 
-my user agent 
+### 2. Crie o ambiente virtual e ative
 
-copia o seu user-agent.
+```bash
+python -m venv .venv
+source  .venv\Scripts\activate # ou .venv/bin/activate no Linux
+```
 
-abra o arquivo settings
-e procure pelo user-agent. 
-Coloque o seu user-agent. 
+### 3. Instale as dependências
 
-agora o site acha que é um usuario normal entrando no site.
+```bash
+pip install -r requirements.txt
+```
 
-sai do shell para atualizar e roda o comando novamente. 
-````bash
-fetch('https://lista.mercadolivre.com.br/notebook#D[A:notebook]')
-````
-posso pegar os mesmos arquvios com o comando
-response.text 
+### 4. Coleta de dados
 
-legal, agora vamos para batalha naval? kkkk 
-Partiu caça os dados do mercado livre
-mostrar como fica os notebooks no inspecionar no mercado livre. 
-nas li.
-só preciso mapear uma unicar vez o parse
+```bash
+cd src/extraction
+scrapy crawl notebook -o ../../data/data.json
+```
 
-vamos pegar o nome da marca de um dos notebooks para testar. 
-achar isso no codigo e a class css que ela pertece. 
-rodar no terminal: 
-response.css('span.poly-component__brand')
-só que assim ele pega um monte de informações a mais e a gente só quer o texto. 
-e também não queremos pegar todos os nomes
-response.css('span.poly-component__brand::text').get()
+> Isso irá gerar ou atualizar `data.json` com os dados dos notebooks.
 
+### 5. Transformação dos dados
 
-podemos verificar todos os itens com: 
-response.text
+```bash
+cd ../../transformLoad
+python main.py
+```
 
-vamos até os site para visualizar esses produtos e sua class css. 
-![alt text](image.png)
+> Esta etapa trata os dados e grava no banco `mercadolivre.db`.
 
-agora vamos até o arquivo notebook em coleta > spidres > notebook.py
+### 6. Executar o dashboard
 
-vamos atualizar o parse para pegar os produtos
-![alt text](image-2.png)
-
-para rodar o codigo e verificar se deu certo
-saia do termina shell scrapy com exit()
-
-````bash
-scrapy crawl notebook -o data.json 
-```` 
--o para salvar o arquivo e o nome na onde vamos salvar esse arquivo.
-podemos salvar em csv também
-
-````bash
-scrapy crawl notebook -o data.csv
-```` 
-
-no arquivo notebook, continue pegando as informações necessarios para nossa analise. 
-exercicio para os alunos. 
-
-Podemos usar o Scrapy em qualquer site, alguns dificulta nossa vida... 
-Sites que fica mudando as classes css toda hora para evitar essas raspagem de dados.
-mas tem formas de pegar isso automatico.
-
-edite o arquivo notebook: 
-![alt text](image-1.png)
-gere o json ou csv: 
-````bash
-scrapy crawl notebook -o data.csv
-```` 
-
-Agora vamos pensar em como pegar o conteudo da proxima pagina.
-mostrar o botão de seguinte para ir para as proximas paginas. 
-
-agora a gente tem o arquivo para trabalhar.
-
-Vamos organizar nossas pastas para trabalhar melhor. 
-
-Agora vamos instalar o pandas, lembrar de sair pasta coleta e ir para pasta raiz do projeto.
-
-pip install pandas
-
-Vamos trabalhar com o pandas agora.
-e 
-depois o dashboard com streamlit
-
-
-Rodar o streamlit
-````bash
+```bash
+cd ../dashboard
 streamlit run app.py
-```` 
+```
 
-02:00 
+---
+
+## 📊 O que o Dashboard mostra?
+
+- Quantidade total de notebooks
+- Preço médio e avaliação média
+- Filtros por faixa de preço, avaliação e busca textual
+- Gráficos interativos de dispersão, tendência e distribuição
+- Tabela com os dados filtrados
+
+---
+
+## 🛡️ Aviso legal
+
+Este projeto é de **uso educacional**. Não há fins comerciais nem automações agressivas.  
+Recomendamos respeitar os termos de uso do Mercado Livre para coleta de dados.
+
+---
+

@@ -1,54 +1,124 @@
 import streamlit as st
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 import sqlite3
 
-#conectar ao banco de dados SQLite
+# Estilo dos gráficos
+# Define o estilo visual dos gráficos do Seaborn.
+# "whitegrid" adiciona uma grade branca de fundo, útil para gráficos com valores numéricos
+sns.set(style="whitegrid")
+# Configura a página do Streamlit para usar layout "wide" (mais espaço horizontal na tela).
+st.set_page_config(layout="wide")
+
+# Conectar e carregar dados
 conn = sqlite3.connect('data/mercadolivre.db')
-
-#carregar os dados do banco de dados
 df = pd.read_sql_query("SELECT * FROM notebooks", conn)
-
-#fechar a conexão com o banco de dados
 conn.close()
 
-# Título da aplicação
-st.title('📊 Pesquisa de Mercado - Notebooks no Mercado Livre')
 
-# Melhorar o layout com colunas para KPIs
-st.subheader('💡 KPIs principais')
+
+# Limpeza de dados (remove preços nulos ou inválidos)
+# O resultado substitui o próprio df.
+# Isso evita valores faltantes ou inválidos nos gráficos.
+df = df[(df['preço_promocional'] > 0) & (df['avaliacao'] > 0)]
+
+# Título
+st.title("📊 Pesquisa Interativa - Notebooks no Mercado Livre")
+
+# Filtros interativos
+st.sidebar.header("🔍 Filtros")
+
+# Faixa de preço 
+# Esses valores serão os limites do slider de preço.
+min_price = int(df['preço_promocional'].min())
+max_price = int(df['preço_promocional'].max())
+faixa_preco = st.sidebar.slider("Faixa de Preço (R$)", min_value=min_price, max_value=max_price, value=(min_price, max_price))
+
+# Faixa de avaliação
+# Cria um slider de avaliação (de 0 a 5 estrelas) com passo de 0.5.
+faixa_avaliacao = st.sidebar.slider("Avaliação (estrelas)", 0.0, 5.0, (0.0, 5.0), step=0.5)
+
+
+# Inicializa com todos os dados (antes de aplicar filtros)
+filtro_df = df.copy()
+
+# Sugestões automáticas: modelos mais comuns
+sugestoes_modelos = df['nome'].value_counts().head(30).index.tolist()
+
+# Multiselect com sugestões populares
+modelos_selecionados = st.sidebar.multiselect(
+    "🧠 Escolha modelos populares (opcional)",
+    options=sugestoes_modelos
+)
+
+# Campo de texto livre para busca por qualquer termo
+termo_busca = st.sidebar.text_input("🔍 Buscar por nome, modelo ou palavra-chave (ex: 'i5', 'Ryzen', '512')")
+
+# Aplica filtro por modelos específicos (caso selecionado)
+if modelos_selecionados:
+    filtro_df = filtro_df[filtro_df['nome'].isin(modelos_selecionados)]
+
+# Aplica filtro por texto digitado
+if termo_busca:
+    filtro_df = filtro_df[filtro_df['nome'].str.contains(termo_busca, case=False, na=False)]
+
+
+
+# Exibir KPIs
+st.subheader("💡 Visão Geral")
 col1, col2, col3 = st.columns(3)
+col1.metric("🖥️ Produtos Filtrados", filtro_df.shape[0])
+col2.metric("💰 Preço Médio", f"R$ {filtro_df['preço_promocional'].mean():.2f}")
+col3.metric("⭐ Avaliação Média", f"{filtro_df['avaliacao'].mean():.2f}")
 
-# KPI 1: Número total de itens
-total_itens = df.shape[0]
-col1.metric(label="🖥️ Total de Notebooks", value=total_itens)
+# 📊 Histograma de preços
+st.subheader("📈 Distribuição de Preços")
+fig1, ax1 = plt.subplots(figsize=(10, 4))
+sns.histplot(filtro_df['preço_promocional'], bins=30, kde=True, ax=ax1, color="skyblue")
+ax1.set_xlabel("Preço Promocional (R$)")
+ax1.set_ylabel("Quantidade de produtos")
+st.pyplot(fig1)
 
-# KPI 2: Número de marcas únicas
-unique_brands = df['marca'].nunique()
-col2.metric(label="🏷️ Marcas Únicas", value=unique_brands)
 
-# KPI 3: Preço médio novo (em reais)
-average_new_price = df['preço_promocional'].mean()
-col3.metric(label="💰 Preço Médio (R$)", value=f"{average_new_price:.2f}")
+st.subheader("📊 Avaliação vs Preço Promocional")
 
-# Marcas mais frequentes
-st.subheader('🏆 Marcas mais encontradas até a 10ª página')
-col1, col2 = st.columns([4, 2])
-top_brands = df['marca'].value_counts().sort_values(ascending=False)
-col1.bar_chart(top_brands)
-col2.write(top_brands)
+col1, col2 = st.columns(2)
 
-# Preço médio por marca
-st.subheader('💵 Preço médio por marca')
-col1, col2 = st.columns([4, 2])
-df_non_zero_prices = df[df['preço_promocional'] > 0]
-average_price_by_brand = df_non_zero_prices.groupby('marca')['preço_promocional'].mean().sort_values(ascending=False)
-col1.bar_chart(average_price_by_brand)
-col2.write(average_price_by_brand)
+# 🎯 Gráfico de Dispersão (Scatterplot)
+with col1:
+    st.markdown("**🎯 Dispersão Avaliação x Preço**")
+    fig_scatter, ax_scatter = plt.subplots(figsize=(5, 4))
+    sns.scatterplot(
+        data=filtro_df,
+        x='avaliacao',
+        y='preço_promocional',
+        hue='avaliacao',
+        palette='coolwarm',
+        ax=ax_scatter,
+        legend=False
+    )
+    ax_scatter.set_xlabel("Avaliação (estrelas)")
+    ax_scatter.set_ylabel("Preço Promocional (R$)")
+    st.pyplot(fig_scatter)
 
-# Satisfação média por marca
-st.subheader('⭐ Satisfação média por marca')
-col1, col2 = st.columns([4, 2])
-df_non_zero_reviews = df[df['avaliacao'] > 0]
-satisfaction_by_brand = df_non_zero_reviews.groupby('marca')['avaliacao'].mean().sort_values(ascending=False)
-col1.bar_chart(satisfaction_by_brand)
-col2.write(satisfaction_by_brand)
+# 📈 Gráfico com Linha de Tendência (Regplot)
+with col2:
+    st.markdown("**📈 Tendência Linear: Avaliação x Preço**")
+    fig_reg, ax_reg = plt.subplots(figsize=(5, 4))
+    sns.regplot(
+        data=filtro_df,
+        x='avaliacao',
+        y='preço_promocional',
+        scatter_kws={"s": 40, "alpha": 0.6},
+        line_kws={"color": "red"},
+        ax=ax_reg
+    )
+    ax_reg.set_xlabel("Avaliação (estrelas)")
+    ax_reg.set_ylabel("Preço Promocional (R$)")
+    st.pyplot(fig_reg)
+
+
+# 📋 Tabela com dados filtrados
+st.subheader("📋 Tabela com os dados filtrados")
+st.dataframe(filtro_df.reset_index(drop=True))
