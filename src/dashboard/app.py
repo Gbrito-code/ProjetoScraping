@@ -39,9 +39,14 @@ faixa_preco = st.sidebar.slider("Faixa de Preço (R$)", min_value=min_price, max
 # Cria um slider de avaliação (de 0 a 5 estrelas) com passo de 0.5.
 faixa_avaliacao = st.sidebar.slider("Avaliação (estrelas)", 0.0, 5.0, (0.0, 5.0), step=0.5)
 
+# Filtra os dados de acordo com os critérios selecionados pelo usuário
+filtro_df = df[
+    (df['preço_promocional'] >= faixa_preco[0]) & 
+    (df['preço_promocional'] <= faixa_preco[1]) & 
+    (df['avaliacao'] >= faixa_avaliacao[0]) & 
+    (df['avaliacao'] <= faixa_avaliacao[1])
+]
 
-# Inicializa com todos os dados (antes de aplicar filtros)
-filtro_df = df.copy()
 
 # Sugestões automáticas: modelos mais comuns
 sugestoes_modelos = df['nome'].value_counts().head(30).index.tolist()
